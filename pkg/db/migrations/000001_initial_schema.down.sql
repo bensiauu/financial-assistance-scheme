@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS applications;
+DROP TABLE IF EXISTS schemes;
+DROP TABLE IF EXISTS applicants;
+DROP TABLE IF EXISTS administrators;

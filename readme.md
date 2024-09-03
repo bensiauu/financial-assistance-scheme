@@ -82,7 +82,7 @@ This will stop the containers and remove the volumes.
 
 You can see the tests that are run if you go to the github repo -> actions.
 
-### 2. API Documentation
+### 3. API Documentation
 
 Documentation can be accessed [here](https://documenter.getpostman.com/view/8685199/2sAXjNYB7C)
 

@@ -10,41 +10,33 @@ import (
 
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
-
-	// Admin routes
-	adminRoutes := router.Group("/admin")
-	{
-		adminRoutes.POST("/", admin.CreateAdministrator)
-		adminRoutes.GET("/", admin.GetAllAdministrators)
-		adminRoutes.GET("/:id", admin.GetAdministratorByID)
-		adminRoutes.PUT("/:id", admin.UpdateAdministrator)
-		adminRoutes.DELETE("/:id", admin.DeleteAdministrator)
-	}
+	router.Group("/api").Group("/admin").
+		POST("/", admin.CreateAdministrator).
+		GET("/", admin.GetAllAdministrators).
+		GET("/:id", admin.GetAdministratorByID).
+		PUT("/:id", admin.UpdateAdministrator).
+		DELETE("/:id", admin.DeleteAdministrator)
 
 	// Applicant routes
-	applicantRoutes := router.Group("/applicants")
-	{
-		applicantRoutes.POST("/", applicants.CreateApplicant)
-		applicantRoutes.GET("/", applicants.GetAllApplicants)
-		applicantRoutes.GET("/:id", applicants.GetApplicantByID)
-		applicantRoutes.PUT("/:id", applicants.UpdateApplicant)
-		applicantRoutes.DELETE("/:id", applicants.DeleteApplicant)
-	}
+	router.Group("/api").Group("/applicants").
+		POST("/", applicants.CreateApplicant).
+		GET("/", applicants.GetAllApplicants).
+		GET("/:id", applicants.GetApplicantByID).
+		PUT("/:id", applicants.UpdateApplicant).
+		DELETE("/:id", applicants.DeleteApplicant)
 
-	applicationRoutes := router.Group("/applications")
-	{
-		applicationRoutes.POST("/", applications.CreateApplication)
-		applicationRoutes.GET("/", applications.GetAllApplication)
-		applicationRoutes.GET("/:id", applications.GetApplicationByID)
-	}
+	router.Group("/api").Group("/applications").
+		POST("/", applications.CreateApplication).
+		GET("/", applications.GetAllApplication).
+		GET("/:id", applications.GetApplicationByID).
+		PUT("/:id", applications.UpdateApplication).
+		DELETE("/:id", applications.DeleteApplication)
 
 	// Scheme routes
-	schemeRoutes := router.Group("/schemes")
-	{
-		schemeRoutes.POST("/", schemes.CreateScheme)
-		schemeRoutes.GET("/", schemes.GetAllSchemes)
-		schemeRoutes.GET("/eligible/", schemes.GetEligibleSchemes)
-	}
+	router.Group("/api").Group("/schemes").
+		POST("/", schemes.CreateScheme).
+		GET("/", schemes.GetAllSchemes).
+		GET("/eligible/", schemes.GetEligibleSchemes)
 
 	return router
 }

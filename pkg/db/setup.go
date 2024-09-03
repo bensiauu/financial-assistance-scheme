@@ -36,6 +36,7 @@ func runMigrations(gormDB *gorm.DB, migrationsDir string) error {
 	if err != nil {
 		return fmt.Errorf("could not obtain sql.db from gorm.db: %w", err)
 	}
+
 	driver, err := migratePostgres.WithInstance(db, &migratePostgres.Config{})
 	if err != nil {
 		return fmt.Errorf("could not create migration driver: %w", err)
@@ -50,8 +51,11 @@ func runMigrations(gormDB *gorm.DB, migrationsDir string) error {
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		return fmt.Errorf("could not run up migrations: %w", err)
+	} else if err == migrate.ErrNoChange {
+		log.Println("No new migrations to apply.")
+	} else {
+		log.Println("Migrations applied successfully!")
 	}
 
-	log.Println("Migrations applied successfully!")
 	return nil
 }

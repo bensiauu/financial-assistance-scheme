@@ -19,6 +19,9 @@ func CreateApplicant(c *gin.Context) {
 		DateOfBirth      string `json:"date_of_birth,omitempty"`
 		LastEmployed     string `json:"last_employed,omitempty"`
 		Income           int    `json:"income,omitempty"`
+		MaritalStatus    string `json:"marital_status,omitempty"`
+		DisabilityStatus string `json:"disability_status,omitempty"`
+		NumberOfChildren int    `json:"number_of_children,omitempty"`
 		Household        []struct {
 			Name             string `json:"name"`
 			Relation         string `json:"relation"`
@@ -55,6 +58,9 @@ func CreateApplicant(c *gin.Context) {
 		DateOfBirth:      dateOfBirth,
 		LastEmployed:     lastEmployed,
 		Income:           input.Income,
+		MaritalStatus:    input.MaritalStatus,
+		DisabilityStatus: input.DisabilityStatus,
+		NumberOfChildren: input.NumberOfChildren,
 	}
 
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
@@ -111,6 +117,9 @@ func GetAllApplicants(c *gin.Context) {
 			DateOfBirth:      applicant.DateOfBirth,
 			LastEmployed:     applicant.LastEmployed,
 			Income:           applicant.Income,
+			MaritalStatus:    applicant.MaritalStatus,
+			DisabilityStatus: applicant.DisabilityStatus,
+			NumberOfChildren: applicant.NumberOfChildren,
 			Household:        applicant.Household,
 		})
 	}
@@ -139,22 +148,74 @@ func GetApplicantByID(c *gin.Context) {
 		Sex:              applicant.Sex,
 		DateOfBirth:      applicant.DateOfBirth,
 		LastEmployed:     applicant.LastEmployed,
+		MaritalStatus:    applicant.MaritalStatus,
+		DisabilityStatus: applicant.DisabilityStatus,
+		NumberOfChildren: applicant.NumberOfChildren,
 		Household:        applicant.Household,
 	}
 
 	c.JSON(http.StatusOK, response)
 }
-func UpdateApplicant(c *gin.Context) {
-	type Input struct {
-		Name             *string                   `json:"name,omitempty"`
-		DateOfBirth      *string                   `json:"date_of_birth,omitempty"`
-		EmploymentStatus *string                   `json:"employment_status,omitempty"`
-		Sex              *string                   `json:"sex,omitempty"`
-		LastEmployed     *string                   `json:"last_employed,omitempty"`
-		Household        *[]models.HouseholdMember `json:"household,omitempty"`
+
+type updateApplicantInput struct {
+	Name             *string                   `json:"name,omitempty"`
+	DateOfBirth      *string                   `json:"date_of_birth,omitempty"`
+	EmploymentStatus *string                   `json:"employment_status,omitempty"`
+	Sex              *string                   `json:"sex,omitempty"`
+	LastEmployed     *string                   `json:"last_employed,omitempty"`
+	Income           *int                      `json:"income,omitempty"`
+	MaritalStatus    *string                   `json:"marital_status,omitempty"`
+	DisabilityStatus *string                   `json:"disability_status,omitempty"`
+	NumberOfChildren *int                      `json:"number_of_children,omitempty"`
+	Household        *[]models.HouseholdMember `json:"household,omitempty"`
+}
+
+func checkForApplicantUpdates(newApplicant updateApplicantInput) (map[string]interface{}, error) {
+	updates := make(map[string]interface{})
+
+	if newApplicant.Name != nil {
+		updates["name"] = *newApplicant.Name
 	}
+	if newApplicant.EmploymentStatus != nil {
+		updates["employment_status"] = *newApplicant.EmploymentStatus
+	}
+	if newApplicant.Sex != nil {
+		updates["sex"] = *newApplicant.Sex
+	}
+	if newApplicant.DateOfBirth != nil {
+		parsedDate, err := time.Parse("2006-01-02", *newApplicant.DateOfBirth)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format for DateOfBirth")
+		}
+		updates["date_of_birth"] = parsedDate
+	}
+	if newApplicant.LastEmployed != nil {
+		parsedDate, err := time.Parse("2006-01-02", *newApplicant.LastEmployed)
+		if err != nil {
+			return nil, fmt.Errorf("invalid date format for LastEmployed")
+		}
+		updates["last_employed"] = parsedDate
+	}
+	if newApplicant.MaritalStatus != nil {
+		updates["marital_status"] = *newApplicant.MaritalStatus
+	}
+	if newApplicant.DisabilityStatus != nil {
+		updates["disability_status"] = *newApplicant.DisabilityStatus
+	}
+	if newApplicant.Income != nil {
+		updates["income"] = newApplicant.Income
+	}
+	if newApplicant.NumberOfChildren != nil {
+		updates["number_of_children"] = newApplicant.NumberOfChildren
+	}
+
+	return updates, nil
+}
+
+func UpdateApplicant(c *gin.Context) {
+
 	var originalApplicant models.Applicant
-	var newApplicant Input
+	var newApplicant updateApplicantInput
 	id := c.Param("id")
 
 	if err := c.ShouldBindBodyWithJSON(&newApplicant); err != nil {
@@ -171,31 +232,10 @@ func UpdateApplicant(c *gin.Context) {
 		return
 	}
 
-	updates := make(map[string]interface{})
-	if newApplicant.Name != nil {
-		updates["name"] = *newApplicant.Name
-	}
-	if newApplicant.EmploymentStatus != nil {
-		updates["employment_status"] = *newApplicant.EmploymentStatus
-	}
-	if newApplicant.Sex != nil {
-		updates["sex"] = *newApplicant.Sex
-	}
-	if newApplicant.DateOfBirth != nil {
-		parsedDate, err := time.Parse("2006-01-02", *newApplicant.DateOfBirth)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format"})
-			return
-		}
-		updates["date_of_birth"] = parsedDate
-	}
-	if newApplicant.LastEmployed != nil {
-		parsedDate, err := time.Parse("2006-01-02", *newApplicant.LastEmployed)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format"})
-			return
-		}
-		updates["last_employed"] = parsedDate
+	updates, err := checkForApplicantUpdates(newApplicant)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	if err := db.DB.Model(&originalApplicant).Updates(updates).Error; err != nil {

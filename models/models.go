@@ -1,6 +1,9 @@
 package models
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,6 +35,10 @@ type Applicant struct {
 	Sex              string            `gorm:"size:10;not null"`
 	DateOfBirth      time.Time         `gorm:"not null"`
 	LastEmployed     *time.Time        `gorm:"type:date"` // Nullable date field
+	Income           int               `gorm:"default:0;not null"`
+	MaritalStatus    string            `gorm:"size:50;not null"`
+	DisabilityStatus string            `gorm:"size:50;not null"`
+	NumberOfChildren int               `gorm:"not null"`
 	CreatedAt        time.Time         `gorm:"default:CURRENT_TIMESTAMP"`
 	UpdatedAt        time.Time         `gorm:"default:CURRENT_TIMESTAMP"`
 	Household        []HouseholdMember `gorm:"foreignkey:ApplicantID"` // One-to-many relationship
@@ -44,6 +51,10 @@ type ApplicantResponse struct {
 	Sex              string            `json:"sex"`
 	DateOfBirth      time.Time         `json:"date_of_birth"`
 	LastEmployed     *time.Time        `json:"last_employed"`
+	Income           int               `json:"income"`
+	MaritalStatus    string            `json:"marital_status"`
+	DisabilityStatus string            `json:"disability_status"`
+	NumberOfChildren int               `json:"number_of_children"`
 	Household        []HouseholdMember `json:"household"`
 }
 
@@ -59,23 +70,43 @@ type HouseholdMember struct {
 	UpdatedAt        time.Time `gorm:"default:CURRENT_TIMESTAMP"`
 }
 
-type Scheme struct {
-	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-	Name      string    `gorm:"size:255;not null"`   // Name of the scheme
-	Criteria  string    `gorm:"type:jsonb;not null"` // Criteria for eligibility (stored as JSONB)
-	Benefits  string    `gorm:"type:jsonb;not null"` // Benefits provided by the scheme (stored as JSONB)
-	CreatedAt time.Time `gorm:"autoCreateTime"`      // Timestamp of when the scheme was created
-	UpdatedAt time.Time `gorm:"autoUpdateTime"`      // Timestamp of when the scheme was last updated
+type Rule struct {
+	Field    string      `json:"field"`
+	Operator string      `json:"operator"`
+	Value    interface{} `json:"value"`
 }
 
-// Application represents an application for a financial assistance scheme.
+type Criteria struct {
+	Rules []Rule `json:"rules"`
+}
+
+func (c *Criteria) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return fmt.Errorf("type assertion to []byte failed")
+	}
+
+	return json.Unmarshal(bytes, &c)
+}
+
+func (c Criteria) Value() (driver.Value, error) {
+	return json.Marshal(c)
+}
+
+type Scheme struct {
+	ID        uuid.UUID       `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
+	Name      string          `gorm:"size:255;not null"`   // Name of the scheme
+	Criteria  Criteria        `gorm:"type:jsonb;not null"` // Criteria for eligibility (stored as JSONB)
+	Benefits  json.RawMessage `gorm:"type:jsonb;not null"` // Benefits provided by the scheme (stored as JSONB)
+	CreatedAt time.Time       `gorm:"autoCreateTime"`      // Timestamp of when the scheme was created
+	UpdatedAt time.Time       `gorm:"autoUpdateTime"`      // Timestamp of when the scheme was last updated
+}
+
 type Application struct {
-	ID          uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-	ApplicantID uuid.UUID `gorm:"type:uuid;not null"`                                                   // Foreign key to Applicant
-	Applicant   Applicant `gorm:"foreignkey:ApplicantID;constraint:onUpdate:CASCADE,onDelete:CASCADE;"` // Relationship with Applicant
-	SchemeID    uuid.UUID `gorm:"type:uuid;not null"`                                                   // Foreign key to Scheme
-	Scheme      Scheme    `gorm:"foreignkey:SchemeID;constraint:onUpdate:CASCADE,onDelete:CASCADE;"`    // Relationship with Scheme
-	Status      string    `gorm:"size:50;not null"`                                                     // Status of the application (e.g., pending, approved, rejected)
-	CreatedAt   time.Time `gorm:"autoCreateTime"`                                                       // Timestamp of when the application was created
-	UpdatedAt   time.Time `gorm:"autoUpdateTime"`                                                       // Timestamp of when the application was last updated
+	ID          uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	ApplicantID uuid.UUID `gorm:"type:uuid;not null"`                 // Foreign key to applicants
+	SchemeID    uuid.UUID `gorm:"type:uuid;not null"`                 // Foreign key to schemes
+	Status      string    `gorm:"size:50;not null;default:'pending'"` // Status of the application
+	CreatedAt   time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
+	UpdatedAt   time.Time `gorm:"type:timestamptz;default:CURRENT_TIMESTAMP"`
 }

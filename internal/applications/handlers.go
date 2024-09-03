@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/bensiauu/financial-assistance-scheme/internal/utils"
 	"github.com/bensiauu/financial-assistance-scheme/models"
 	"github.com/bensiauu/financial-assistance-scheme/pkg/db"
 	"github.com/gin-gonic/gin"
@@ -16,11 +17,32 @@ func CreateApplication(c *gin.Context) {
 		return
 	}
 
-	if err := db.DB.Create(application).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create application record in DB"})
+	// Check eligibility using the shared utility function
+	eligibleSchemes, err := utils.GetEligibleSchemes(application.ApplicantID.String())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "application created successfully"})
+
+	isEligible := false
+	for _, scheme := range eligibleSchemes {
+		if scheme.ID == application.SchemeID {
+			isEligible = true
+			break
+		}
+	}
+
+	if !isEligible {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Applicant is not eligible for this scheme"})
+		return
+	}
+
+	if err := db.DB.Create(&application).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create application record in DB"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Application created successfully"})
 }
 func GetAllApplication(c *gin.Context) {
 	var applications []models.Application
@@ -46,4 +68,49 @@ func GetApplicationByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, application)
+}
+
+func UpdateApplication(c *gin.Context) {
+	id := c.Param("id")
+	var application models.Application
+
+	if err := db.DB.First(&application, "id = ?", id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+		return
+	}
+
+	var input map[string]interface{}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	if err := db.DB.Model(&application).Updates(input).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update application"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "application updated successfully"})
+}
+
+func DeleteApplication(c *gin.Context) {
+	id := c.Param("id")
+
+	var application models.Application
+	if err := db.DB.First(&application, "id = ?", id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+		return
+	}
+
+	result := db.DB.Delete(&application)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete application"})
+		return
+	}
+
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Application deleted successfully"})
 }

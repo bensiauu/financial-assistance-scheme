@@ -23,7 +23,7 @@ func InitDB(connAddr, migrationsDir string) {
 
 	err = runMigrations(db, migrationsDir)
 	if err != nil {
-		log.Fatalf("Subsequent migration failed: %v", err)
+		log.Fatalf("migration failed: %v", err)
 	}
 
 	DB = db

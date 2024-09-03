@@ -6,7 +6,9 @@ import (
 	"github.com/bensiauu/financial-assistance-scheme/models"
 	"github.com/bensiauu/financial-assistance-scheme/pkg/db"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func CreateAdministrator(c *gin.Context) {
@@ -24,7 +26,13 @@ func CreateAdministrator(c *gin.Context) {
 	admin.PasswordHash = string(hashedPassword)
 
 	if err := db.DB.Create(&admin).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create record in DB"})
+		// Check if the error is a PostgreSQL unique constraint violation
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+			c.JSON(http.StatusConflict, gin.H{"error": "email is already in use"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -38,7 +46,18 @@ func GetAllAdministrators(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, admins)
+	var response []models.AdministratorResponse
+	for _, admin := range admins {
+		response = append(response, models.AdministratorResponse{
+			ID:        admin.ID,
+			Name:      admin.Name,
+			Email:     admin.Email,
+			CreatedAt: admin.CreatedAt,
+			UpdatedAt: admin.UpdatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
 
 }
 
@@ -46,12 +65,25 @@ func GetAdministratorByID(c *gin.Context) {
 	id := c.Param("id")
 	var admin models.Administrator
 
-	if err := db.DB.Find(&admin, "id = ?", id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "administrator not found"})
+	if err := db.DB.First(&admin, "id = ?", id).Error; err != nil {
+		if gorm.ErrRecordNotFound == err {
+			c.JSON(http.StatusNotFound, gin.H{"error": "administrator not found"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve administrator"})
 		return
 	}
 
-	c.JSON(http.StatusOK, admin)
+	response := models.AdministratorResponse{
+		ID:        admin.ID,
+		Name:      admin.Name,
+		Email:     admin.Email,
+		CreatedAt: admin.CreatedAt,
+		UpdatedAt: admin.UpdatedAt,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func UpdateAdministrator(c *gin.Context) {
@@ -100,9 +132,16 @@ func UpdateAdministrator(c *gin.Context) {
 
 func DeleteAdministrator(c *gin.Context) {
 	id := c.Param("id")
-	if err := db.DB.Delete(&models.Administrator{}, "id = ?", id); err != nil {
+	result := db.DB.Delete(&models.Administrator{}, "id = ?", id)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete administrator"})
+		return
+	}
+
+	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "administrator not found"})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "administrator deleted successfully"})
 }

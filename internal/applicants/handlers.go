@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/bensiauu/financial-assistance-scheme/models"
 	"github.com/bensiauu/financial-assistance-scheme/pkg/db"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func CreateApplicant(c *gin.Context) {
@@ -31,24 +33,55 @@ func GetAllApplicants(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, applicants)
+	var response []models.ApplicantResponse
+	for _, applicant := range applicants {
+		response = append(response, models.ApplicantResponse{
+			ID:               applicant.ID,
+			Name:             applicant.Name,
+			EmploymentStatus: applicant.EmploymentStatus,
+			Sex:              applicant.Sex,
+			DateOfBirth:      applicant.DateOfBirth,
+			LastEmployed:     applicant.LastEmployed,
+			Household:        applicant.Household,
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 func GetApplicantByID(c *gin.Context) {
 	var applicant models.Applicant
 	id := c.Param("id")
 
-	if err := db.DB.Find(&applicant, "id = ?", id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "applicant not found"})
+	if err := db.DB.First(&applicant, "id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "applicant not found"})
+			return
+
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, applicant)
+	response := models.ApplicantResponse{
+		ID:               applicant.ID,
+		Name:             applicant.Name,
+		EmploymentStatus: applicant.EmploymentStatus,
+		Sex:              applicant.Sex,
+		DateOfBirth:      applicant.DateOfBirth,
+		LastEmployed:     applicant.LastEmployed,
+		Household:        applicant.Household,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 func UpdateApplicant(c *gin.Context) {
 	type Input struct {
 		Name             *string                   `json:"name,omitempty"`
-		EmploymentStatus *string                   `json:"emplyment_status,omitempty"`
+		DateOfBirth      *string                   `json:"date_of_birth,omitempty"`
+		EmploymentStatus *string                   `json:"employment_status,omitempty"`
 		Sex              *string                   `json:"sex,omitempty"`
+		LastEmployed     *string                   `json:"last_employed,omitempty"`
 		Household        *[]models.HouseholdMember `json:"household,omitempty"`
 	}
 	var originalApplicant models.Applicant
@@ -60,8 +93,12 @@ func UpdateApplicant(c *gin.Context) {
 		return
 	}
 
-	if err := db.DB.Find(&originalApplicant, "id = ?", id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "applicant not found"})
+	if err := db.DB.First(&originalApplicant, "id = ?", id).Error; err != nil {
+		if gorm.ErrRecordNotFound == err {
+			c.JSON(http.StatusNotFound, gin.H{"error": "applicant not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -75,6 +112,23 @@ func UpdateApplicant(c *gin.Context) {
 	if newApplicant.Sex != nil {
 		updates["sex"] = *newApplicant.Sex
 	}
+	if newApplicant.DateOfBirth != nil {
+		parsedDate, err := time.Parse("2006-01-02", *newApplicant.DateOfBirth)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format"})
+			return
+		}
+		updates["date_of_birth"] = parsedDate
+	}
+	if newApplicant.LastEmployed != nil {
+		parsedDate, err := time.Parse("2006-01-02", *newApplicant.LastEmployed)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date format"})
+			return
+		}
+		updates["last_employed"] = parsedDate
+	}
+
 	if err := db.DB.Model(&originalApplicant).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -99,7 +153,15 @@ func UpdateApplicant(c *gin.Context) {
 }
 func DeleteApplicant(c *gin.Context) {
 	id := c.Param("id")
-	if err := db.DB.Delete(&models.Applicant{}, "id = ?", id).Error; err != nil {
+
+	result := db.DB.Delete(&models.Applicant{}, "id = ?", id)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error.Error()})
+		return
+	}
+
+	if result.RowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "applicant not found"})
 		return
 	}

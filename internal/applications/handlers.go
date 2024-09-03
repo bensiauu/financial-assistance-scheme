@@ -6,6 +6,7 @@ import (
 	"github.com/bensiauu/financial-assistance-scheme/models"
 	"github.com/bensiauu/financial-assistance-scheme/pkg/db"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func CreateApplication(c *gin.Context) {
@@ -34,9 +35,14 @@ func GetApplicationByID(c *gin.Context) {
 	id := c.Param("id")
 	var application models.Applicant
 
-	if err := db.DB.Find(&application, "id = ?", id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "applicantion not found"})
+	if err := db.DB.First(&application, "id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "applicantion not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+
 	}
 
 	c.JSON(http.StatusOK, application)

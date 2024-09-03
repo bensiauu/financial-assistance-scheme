@@ -16,17 +16,35 @@ type Administrator struct {
 	UpdatedAt    time.Time `gorm:"default:CURRENT_TIMESTAMP"`
 }
 
+type AdministratorResponse struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 // Applicant represents an individual applying for financial assistance.
 type Applicant struct {
 	ID               uuid.UUID         `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
 	Name             string            `gorm:"size:255;not null"`
-	EmploymentStatus string            `gorm:"size:50;not null"`
+	EmploymentStatus string            `gorm:"column:employment_status;size:50;not null"`
 	Sex              string            `gorm:"size:10;not null"`
 	DateOfBirth      time.Time         `gorm:"not null"`
 	LastEmployed     *time.Time        `gorm:"type:date"` // Nullable date field
 	CreatedAt        time.Time         `gorm:"default:CURRENT_TIMESTAMP"`
 	UpdatedAt        time.Time         `gorm:"default:CURRENT_TIMESTAMP"`
 	Household        []HouseholdMember `gorm:"foreignkey:ApplicantID"` // One-to-many relationship
+}
+
+type ApplicantResponse struct {
+	ID               uuid.UUID         `json:"id"`
+	Name             string            `json:"name"`
+	EmploymentStatus string            `json:"employment_status"`
+	Sex              string            `json:"sex"`
+	DateOfBirth      time.Time         `json:"date_of_birth"`
+	LastEmployed     *time.Time        `json:"last_employed"`
+	Household        []HouseholdMember `json:"household"`
 }
 
 // HouseholdMember represents a member of the applicant's household.

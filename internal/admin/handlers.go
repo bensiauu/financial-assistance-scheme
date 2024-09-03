@@ -18,7 +18,7 @@ func CreateAdministrator(c *gin.Context) {
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(admin.PasswordHash), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to has password"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
 		return
 	}
 	admin.PasswordHash = string(hashedPassword)
@@ -74,11 +74,12 @@ func UpdateAdministrator(c *gin.Context) {
 		return
 	}
 
+	updates := make(map[string]interface{})
 	if newAdmin.Name != "" {
-		prevAdmin.Name = newAdmin.Name
+		updates["name"] = newAdmin.Name
 	}
 	if newAdmin.Email != "" {
-		prevAdmin.Email = newAdmin.Email
+		updates["email"] = newAdmin.Email
 	}
 	if newAdmin.PasswordHash != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newAdmin.PasswordHash), bcrypt.DefaultCost)
@@ -86,10 +87,10 @@ func UpdateAdministrator(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash new password"})
 			return
 		}
-		prevAdmin.PasswordHash = string(hashedPassword)
+		updates["password_hash"] = string(hashedPassword)
 	}
 
-	if err := db.DB.Save(&prevAdmin).Error; err != nil {
+	if err := db.DB.Model(&prevAdmin).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -1,6 +1,11 @@
 package main
 
-import "github.com/bensiauu/financial-assistance-scheme/pkg/db"
+import (
+	"log"
+
+	"github.com/bensiauu/financial-assistance-scheme/internal/router"
+	"github.com/bensiauu/financial-assistance-scheme/pkg/db"
+)
 
 func main() {
 	connAddr := "host=localhost user=govtech password=password123 dbname=financial_assistance sslmode=disable"
@@ -10,8 +15,9 @@ func main() {
 	// Initialize the database and run migrations
 	db.InitDB(connAddr, migrationsDir)
 
-	// Continue with the rest of your application logic...
-	// Example: Start your Gin server here
-	// r := gin.Default()
-	// r.Run()
+	r := router.SetupRouter()
+
+	if err := r.Run(":8080"); err != nil {
+		log.Fatalf("Failed to run server: %v", err)
+	}
 }

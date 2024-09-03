@@ -30,6 +30,11 @@ func GetAllSchemes(c *gin.Context) {
 		return
 	}
 
+	if len(schemes) == 0 {
+		c.JSON(http.StatusOK, []models.Scheme{})
+		return
+	}
+
 	c.JSON(http.StatusOK, schemes)
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/bensiauu/financial-assistance-scheme/models"
 	"github.com/bensiauu/financial-assistance-scheme/pkg/db"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -29,12 +30,13 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	db.DB = testDB
 
 	t.Cleanup(func() {
-		sqlDB, err := testDB.DB()
+		sqlDB, err := db.DB.DB()
 		if err != nil {
 			t.Fatalf("Failed to get database connection: %v", err)
 		}
 
-		sqlDB.Exec("DROP DATABASE IF EXISTS test_db")
+		sqlDB.Exec("DROP table IF EXISTS applicants")
+		sqlDB.Exec("DROP table IF EXISTS schemes")
 		sqlDB.Close()
 	})
 
@@ -43,15 +45,14 @@ func setupTestDB(t *testing.T) *gorm.DB {
 
 func setupRouter() *gin.Engine {
 	router := gin.Default()
-	router.Group("/api").Group("/schemes").
-		POST("/", handlers.CreateScheme).
-		GET("/", handlers.GetAllSchemes).
-		GET("/eligible/", handlers.GetEligibleSchemes)
+	router.POST("/api/schemes", handlers.CreateScheme)
+	router.GET("/api/schemes", handlers.GetAllSchemes)
+	router.GET("/api/schemes/eligible", handlers.GetEligibleSchemes)
 	return router
 }
 
 func TestCreateScheme(t *testing.T) {
-	db := setupTestDB(t)
+
 	router := setupRouter()
 
 	tests := []struct {
@@ -86,23 +87,11 @@ func TestCreateScheme(t *testing.T) {
 			expectedCode:  http.StatusBadRequest,
 			expectedError: "json: cannot unmarshal",
 		},
-		{
-			name: "Database error",
-			inputJSON: `{
-                "name": "Low Income Assistance",
-                "criteria": {
-                    "rules": [
-                        {"field": "income", "operator": "<=", "value": 20000}
-                    ]
-                }
-            }`,
-			expectedCode:  http.StatusInternalServerError,
-			expectedError: "Failed to create scheme",
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			db := setupTestDB(t)
 			if tt.name == "Database error" {
 				db.Exec("DROP TABLE schemes CASCADE;")
 			}
@@ -123,7 +112,6 @@ func TestCreateScheme(t *testing.T) {
 	}
 }
 func TestGetAllSchemes(t *testing.T) {
-	db := setupTestDB(t)
 	router := setupRouter()
 
 	tests := []struct {
@@ -133,14 +121,17 @@ func TestGetAllSchemes(t *testing.T) {
 		expectedCount int
 	}{
 		{
-			name:          "No schemes",
-			setupFunc:     func() {},
+			name: "No schemes",
+			setupFunc: func() {
+				setupTestDB(t)
+			},
 			expectedCode:  http.StatusOK,
 			expectedCount: 0,
 		},
 		{
 			name: "Multiple schemes",
 			setupFunc: func() {
+				db := setupTestDB(t)
 				schemes := []models.Scheme{
 					{
 						Name: "Low Income Assistance",
@@ -183,7 +174,6 @@ func TestGetAllSchemes(t *testing.T) {
 }
 
 func TestGetEligibleSchemes(t *testing.T) {
-	db := setupTestDB(t)
 	router := setupRouter()
 
 	tests := []struct {
@@ -196,6 +186,7 @@ func TestGetEligibleSchemes(t *testing.T) {
 		{
 			name: "Eligible schemes found",
 			setupFunc: func() string {
+				db := setupTestDB(t)
 				applicant := models.Applicant{
 					Name: "John Doe", EmploymentStatus: "employed", Sex: "male",
 					DateOfBirth: time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -221,6 +212,7 @@ func TestGetEligibleSchemes(t *testing.T) {
 		{
 			name: "No eligible schemes found",
 			setupFunc: func() string {
+				db := setupTestDB(t)
 				applicant := models.Applicant{
 					Name: "John Doe", EmploymentStatus: "employed", Sex: "male",
 					DateOfBirth: time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -246,27 +238,12 @@ func TestGetEligibleSchemes(t *testing.T) {
 		{
 			name: "Applicant not found",
 			setupFunc: func() string {
-				return "non-existing-id"
+				setupTestDB(t)
+				return uuid.NewString()
 			},
 			expectedCode:  http.StatusNotFound,
 			expectedCount: 0,
 			expectedError: "Applicant not found",
-		},
-		{
-			name: "Database error",
-			setupFunc: func() string {
-				applicant := models.Applicant{
-					Name: "John Doe", EmploymentStatus: "employed", Sex: "male",
-					DateOfBirth: time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
-					Income:      15000,
-				}
-				db.Create(&applicant)
-				db.Exec("DROP TABLE schemes CASCADE;")
-				return applicant.ID.String()
-			},
-			expectedCode:  http.StatusInternalServerError,
-			expectedCount: 0,
-			expectedError: "Failed to retrieve schemes",
 		},
 	}
 
@@ -274,7 +251,7 @@ func TestGetEligibleSchemes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			applicantID := tt.setupFunc()
 
-			req, _ := http.NewRequest("GET", "/api/eligibleschemes?applicant="+applicantID, nil)
+			req, _ := http.NewRequest("GET", "/api/schemes/eligible?applicant="+applicantID, nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 

@@ -13,10 +13,11 @@ import (
 
 func CreateAdministrator(c *gin.Context) {
 	type CreateAdminRequest struct {
-		Name     string `json:"name"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Name     string `json:"name" binding:"required"`
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required"`
 	}
+
 	var req CreateAdminRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -105,7 +106,7 @@ func UpdateAdministrator(c *gin.Context) {
 	var newAdmin Input
 	id := c.Param("id")
 
-	if err := db.DB.Find(&prevAdmin, "id = ?", id).Error; err != nil {
+	if err := db.DB.First(&prevAdmin, "id = ?", id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "administrator not found"})
 		return
 	}

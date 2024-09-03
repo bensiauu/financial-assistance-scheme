@@ -13,7 +13,7 @@ import (
 
 func CreateApplicant(c *gin.Context) {
 	var input struct {
-		Name             string `json:"name,omitempty"`
+		Name             string `json:"name" binding:"required"`
 		EmploymentStatus string `json:"employment_status,omitempty"`
 		Sex              string `json:"sex,omitempty"`
 		DateOfBirth      string `json:"date_of_birth,omitempty"`
@@ -107,7 +107,13 @@ func GetAllApplicants(c *gin.Context) {
 		return
 	}
 
-	var response []models.ApplicantResponse
+	// Check if no applicants were found
+	if len(applicants) == 0 {
+		c.JSON(http.StatusOK, []models.ApplicantResponse{})
+		return
+	}
+
+	response := make([]models.ApplicantResponse, 0)
 	for _, applicant := range applicants {
 		response = append(response, models.ApplicantResponse{
 			ID:               applicant.ID,
@@ -137,7 +143,7 @@ func GetApplicantByID(c *gin.Context) {
 
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve applicant"})
 		return
 	}
 

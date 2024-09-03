@@ -51,6 +51,11 @@ func GetAllApplication(c *gin.Context) {
 		return
 	}
 
+	if len(applications) == 0 {
+		c.JSON(http.StatusOK, []models.Application{})
+		return
+	}
+
 	c.JSON(http.StatusOK, applications)
 }
 func GetApplicationByID(c *gin.Context) {
@@ -75,11 +80,14 @@ func UpdateApplication(c *gin.Context) {
 	var application models.Application
 
 	if err := db.DB.First(&application, "id = ?", id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
 		return
 	}
 
-	var input map[string]interface{}
+	type updateInput struct {
+		Status string `json:"status"`
+	}
+	var input updateInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
@@ -98,7 +106,7 @@ func DeleteApplication(c *gin.Context) {
 
 	var application models.Application
 	if err := db.DB.First(&application, "id = ?", id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Application not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
 		return
 	}
 
@@ -112,5 +120,5 @@ func DeleteApplication(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Application deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "application deleted successfully"})
 }

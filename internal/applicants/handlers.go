@@ -158,16 +158,21 @@ func GetApplicantByID(c *gin.Context) {
 }
 
 type updateApplicantInput struct {
-	Name             *string                   `json:"name,omitempty"`
-	DateOfBirth      *string                   `json:"date_of_birth,omitempty"`
-	EmploymentStatus *string                   `json:"employment_status,omitempty"`
-	Sex              *string                   `json:"sex,omitempty"`
-	LastEmployed     *string                   `json:"last_employed,omitempty"`
-	Income           *int                      `json:"income,omitempty"`
-	MaritalStatus    *string                   `json:"marital_status,omitempty"`
-	DisabilityStatus *string                   `json:"disability_status,omitempty"`
-	NumberOfChildren *int                      `json:"number_of_children,omitempty"`
-	Household        *[]models.HouseholdMember `json:"household,omitempty"`
+	Name             *string `json:"name,omitempty"`
+	DateOfBirth      *string `json:"date_of_birth,omitempty"`
+	EmploymentStatus *string `json:"employment_status,omitempty"`
+	Sex              *string `json:"sex,omitempty"`
+	LastEmployed     *string `json:"last_employed,omitempty"`
+	Income           *int    `json:"income,omitempty"`
+	MaritalStatus    *string `json:"marital_status,omitempty"`
+	DisabilityStatus *string `json:"disability_status,omitempty"`
+	NumberOfChildren *int    `json:"number_of_children,omitempty"`
+	Household        *[]struct {
+		Name             string `json:"name"`
+		Relation         string `json:"relation"`
+		DateOfBirth      string `json:"date_of_birth"`
+		EmploymentStatus string `json:"employment_status"`
+	} `json:"household,omitempty"`
 }
 
 func checkForApplicantUpdates(newApplicant updateApplicantInput) (map[string]interface{}, error) {
@@ -249,8 +254,20 @@ func UpdateApplicant(c *gin.Context) {
 
 		// Add new household members
 		for _, member := range *newApplicant.Household {
-			member.ApplicantID = originalApplicant.ID
-			if err := db.DB.Create(&member).Error; err != nil {
+			hDOB, err := time.Parse("2006-01-02", member.DateOfBirth)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid date of birth"})
+				return
+			}
+
+			householdMember := models.HouseholdMember{
+				ApplicantID:      originalApplicant.ID,
+				Name:             member.Name,
+				Relation:         member.Relation,
+				DateOfBirth:      hDOB,
+				EmploymentStatus: member.EmploymentStatus,
+			}
+			if err := db.DB.Create(&householdMember).Error; err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}

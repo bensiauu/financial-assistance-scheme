@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,7 +18,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) *gorm.DB {
-	dsn := "host=localhost user=postgres password=postgres dbname=test_db port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+	dsn := "host=localhost user=testuser password=password123 dbname=test_db port=5432 sslmode=disable TimeZone=Asia/Shanghai"
 	testDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("Failed to connect to database: %v", err)
@@ -55,93 +56,317 @@ func TestCreateAdministrator(t *testing.T) {
 
 	router := setupRouter()
 
-	adminJSON := `{"name": "John Doe", "email": "john@example.com", "password_hash": "password123"}`
-	req, _ := http.NewRequest("POST", "/api/administrators", strings.NewReader(adminJSON))
-	req.Header.Set("Content-Type", "application/json")
+	tests := []struct {
+		name          string
+		inputJSON     string
+		expectedCode  int
+		expectedError string
+	}{
+		{
+			name:          "Valid input",
+			inputJSON:     `{"name": "John Doe", "email": "john@example.com", "password": "password123"}`,
+			expectedCode:  http.StatusOK,
+			expectedError: "",
+		},
+		{
+			name:          "Missing name",
+			inputJSON:     `{"email": "john@example.com", "password": "password123"}`,
+			expectedCode:  http.StatusBadRequest,
+			expectedError: "Key: 'CreateAdminRequest.Name' Error:Field validation for 'Name' failed on the 'required' tag",
+		},
+		{
+			name:          "Missing email",
+			inputJSON:     `{"name": "John Doe", "password": "password123"}`,
+			expectedCode:  http.StatusBadRequest,
+			expectedError: "Key: 'CreateAdminRequest.Email' Error:Field validation for 'Email' failed on the 'required' tag",
+		},
+		{
+			name:          "Invalid email format",
+			inputJSON:     `{"name": "John Doe", "email": "invalid-email", "password": "password123"}`,
+			expectedCode:  http.StatusBadRequest,
+			expectedError: "Invalid email format",
+		},
+		{
+			name:          "Duplicate email",
+			inputJSON:     `{"name": "John Doe", "email": "john@example.com", "password": "password123"}`,
+			expectedCode:  http.StatusConflict,
+			expectedError: "email is already in use",
+		},
+	}
 
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Prepopulate the database for the duplicate email test case
+			if tt.name == "Duplicate email" {
+				admin := models.Administrator{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"}
+				db.Create(&admin)
+			}
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "admin created successfully")
+			req, _ := http.NewRequest("POST", "/api/administrators", strings.NewReader(tt.inputJSON))
+			req.Header.Set("Content-Type", "application/json")
 
-	var admin models.Administrator
-	db.First(&admin)
-	assert.Equal(t, "john@example.com", admin.Email)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedCode, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
+	}
 }
 
 func TestGetAllAdministrators(t *testing.T) {
 	db := setupTestDB(t)
-
-	admin := models.Administrator{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"}
-	db.Create(&admin)
-
 	router := setupRouter()
 
-	req, _ := http.NewRequest("GET", "/api/administrators", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	tests := []struct {
+		name          string
+		setupFunc     func()
+		expectedCode  int
+		expectedCount int
+	}{
+		{
+			name:          "No administrators",
+			setupFunc:     func() {}, // No setup needed
+			expectedCode:  http.StatusOK,
+			expectedCount: 0,
+		},
+		{
+			name: "Multiple administrators",
+			setupFunc: func() {
+				// Add multiple administrators
+				admins := []models.Administrator{
+					{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"},
+					{Name: "Jane Doe", Email: "jane@example.com", PasswordHash: "hashedpassword"},
+				}
+				db.Create(&admins)
+			},
+			expectedCode:  http.StatusOK,
+			expectedCount: 2,
+		},
+	}
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "john@example.com")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupFunc()
+
+			req, _ := http.NewRequest("GET", "/api/administrators", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedCode, w.Code)
+
+			var response []models.AdministratorResponse
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedCount, len(response))
+		})
+	}
 }
 
 func TestGetAdministratorByID(t *testing.T) {
 	db := setupTestDB(t)
-
-	admin := models.Administrator{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"}
-	db.Create(&admin)
-
 	router := setupRouter()
 
-	req, _ := http.NewRequest("GET", "/api/administrators/"+admin.ID.String(), nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	tests := []struct {
+		name          string
+		adminID       string
+		setupFunc     func() string // Returns the ID of the created admin
+		expectedCode  int
+		expectedError string
+	}{
+		{
+			name: "Administrator exists",
+			setupFunc: func() string {
+				// Add an administrator
+				admin := models.Administrator{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"}
+				db.Create(&admin)
+				return admin.ID.String()
+			},
+			expectedCode:  http.StatusOK,
+			expectedError: "",
+		},
+		{
+			name: "Administrator does not exist",
+			setupFunc: func() string {
+				// No admin setup
+				return "non-existing-id"
+			},
+			expectedCode:  http.StatusNotFound,
+			expectedError: "administrator not found",
+		},
+		{
+			name: "Database error",
+			setupFunc: func() string {
+				// Simulate a database error by closing the DB connection
+				db.Exec("DROP TABLE administrators CASCADE;")
+				return "non-existing-id"
+			},
+			expectedCode:  http.StatusInternalServerError,
+			expectedError: "failed to retrieve administrator",
+		},
+	}
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "john@example.com")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adminID := tt.setupFunc()
+
+			req, _ := http.NewRequest("GET", "/api/administrators/"+adminID, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedCode, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			} else {
+				var response models.AdministratorResponse
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, adminID, response.ID.String())
+			}
+		})
+	}
 }
 
 func TestUpdateAdministrator(t *testing.T) {
 	db := setupTestDB(t)
-
-	// Create a test admin
-	admin := models.Administrator{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"}
-	db.Create(&admin)
-
 	router := setupRouter()
 
-	updateJSON := `{"name": "Jane Doe"}`
-	req, _ := http.NewRequest("PUT", "/api/administrators/"+admin.ID.String(), strings.NewReader(updateJSON))
-	req.Header.Set("Content-Type", "application/json")
+	tests := []struct {
+		name          string
+		setupFunc     func() string // Returns the ID of the created admin
+		inputJSON     string
+		expectedCode  int
+		expectedError string
+	}{
+		{
+			name: "Valid update",
+			setupFunc: func() string {
+				// Add an administrator
+				admin := models.Administrator{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"}
+				db.Create(&admin)
+				return admin.ID.String()
+			},
+			inputJSON:     `{"name": "Jane Doe", "email": "jane@example.com", "password": "newpassword123"}`,
+			expectedCode:  http.StatusOK,
+			expectedError: "",
+		},
+		{
+			name: "Administrator not found",
+			setupFunc: func() string {
+				// No admin setup
+				return "non-existing-id"
+			},
+			inputJSON:     `{"name": "Jane Doe"}`,
+			expectedCode:  http.StatusNotFound,
+			expectedError: "administrator not found",
+		},
+		{
+			name: "Invalid input",
+			setupFunc: func() string {
+				// Add an administrator
+				admin := models.Administrator{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"}
+				db.Create(&admin)
+				return admin.ID.String()
+			},
+			inputJSON:     `{"name": 12345}`, // Invalid JSON
+			expectedCode:  http.StatusBadRequest,
+			expectedError: "json: cannot unmarshal number into Go struct field Input.name of type string",
+		},
+		{
+			name: "Database error on update",
+			setupFunc: func() string {
+				// Add an administrator and simulate a database error
+				admin := models.Administrator{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"}
+				db.Create(&admin)
+				db.Exec("DROP TABLE administrators CASCADE;")
+				return admin.ID.String()
+			},
+			inputJSON:     `{"name": "Jane Doe"}`,
+			expectedCode:  http.StatusInternalServerError,
+			expectedError: "failed to hash new password",
+		},
+	}
 
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adminID := tt.setupFunc()
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "administrator updated successfully")
+			req, _ := http.NewRequest("PUT", "/api/administrators/"+adminID, strings.NewReader(tt.inputJSON))
+			req.Header.Set("Content-Type", "application/json")
 
-	db.First(&admin)
-	assert.Equal(t, "Jane Doe", admin.Name)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedCode, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			} else {
+				assert.Contains(t, w.Body.String(), "administrator updated successfully")
+			}
+		})
+	}
 }
 
 func TestDeleteAdministrator(t *testing.T) {
 	db := setupTestDB(t)
-
-	// Create a test admin
-	admin := models.Administrator{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"}
-	db.Create(&admin)
-
 	router := setupRouter()
 
-	req, _ := http.NewRequest("DELETE", "/api/administrators/"+admin.ID.String(), nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	tests := []struct {
+		name          string
+		setupFunc     func() string // Returns the ID of the created admin
+		expectedCode  int
+		expectedError string
+	}{
+		{
+			name: "Valid delete",
+			setupFunc: func() string {
+				// Add an administrator
+				admin := models.Administrator{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"}
+				db.Create(&admin)
+				return admin.ID.String()
+			},
+			expectedCode:  http.StatusOK,
+			expectedError: "",
+		},
+		{
+			name: "Administrator not found",
+			setupFunc: func() string {
+				// No admin setup
+				return "non-existing-id"
+			},
+			expectedCode:  http.StatusNotFound,
+			expectedError: "administrator not found",
+		},
+		{
+			name: "Database error on delete",
+			setupFunc: func() string {
+				// Add an administrator and simulate a database error
+				admin := models.Administrator{Name: "John Doe", Email: "john@example.com", PasswordHash: "hashedpassword"}
+				db.Create(&admin)
+				db.Exec("DROP TABLE administrators CASCADE;")
+				return admin.ID.String()
+			},
+			expectedCode:  http.StatusInternalServerError,
+			expectedError: "failed to delete administrator",
+		},
+	}
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "administrator deleted successfully")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adminID := tt.setupFunc()
 
-	var count int64
-	db.Model(&models.Administrator{}).Count(&count)
-	assert.Equal(t, int64(0), count)
+			req, _ := http.NewRequest("DELETE", "/api/administrators/"+adminID, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedCode, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			} else {
+				assert.Contains(t, w.Body.String(), "administrator deleted successfully")
+			}
+		})
+	}
 }

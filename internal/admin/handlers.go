@@ -12,18 +12,27 @@ import (
 )
 
 func CreateAdministrator(c *gin.Context) {
-	var admin models.Administrator
+	type CreateAdminRequest struct {
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req CreateAdminRequest
 
-	if err := c.ShouldBindJSON(&admin); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(admin.PasswordHash), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
 		return
 	}
-	admin.PasswordHash = string(hashedPassword)
+	admin := models.Administrator{
+		Name:         req.Name,
+		Email:        req.Email,
+		PasswordHash: string(hashedPassword),
+	}
 
 	if err := db.DB.Create(&admin).Error; err != nil {
 		// Check if the error is a PostgreSQL unique constraint violation

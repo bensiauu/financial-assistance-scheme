@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -11,19 +12,40 @@ import (
 
 var JWTSecret = []byte("")
 
-func GenerateJWT(userID string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": userID,
-		"exp": time.Now().Add(time.Hour * 72).Unix(),
-		"iat": time.Now().Unix(),
-	})
+func GenerateJWT(email string) (string, error) {
+	expirationTime := time.Now().Add(24 * time.Hour)
+	claims := &jwt.RegisteredClaims{
+		Subject:   email,
+		ExpiresAt: jwt.NewNumericDate(expirationTime),
+	}
 
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(JWTSecret)
 	if err != nil {
 		return "", err
 	}
-
 	return tokenString, nil
+}
+
+func ValidateJWT(tokenString string) (*jwt.RegisteredClaims, error) {
+	claims := &jwt.RegisteredClaims{}
+
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return JWTSecret, nil
+	})
+
+	if err != nil {
+		if err == jwt.ErrSignatureInvalid {
+			return nil, err
+		}
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	return claims, nil
 }
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -42,18 +64,14 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, jwt.NewValidationError("unexpected signing method", jwt.ValidationErrorSignatureInvalid)
-			}
-			return JWTSecret, nil
-		})
-
-		if err != nil || !token.Valid {
+		claims, err := ValidateJWT(tokenString)
+		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
 			return
 		}
+
+		c.Set("claims", claims)
 
 		c.Next()
 	}

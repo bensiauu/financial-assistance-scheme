@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -10,7 +11,7 @@ import (
 )
 
 func main() {
-	connAddr := "host=localhost user=govtech password=password123 dbname=financial_assistance sslmode=disable"
+	connAddr := fmt.Sprintf("host=db user=govtech password=%s dbname=financial_assistance sslmode=disable", os.Getenv("DB_PASSWORD"))
 
 	migrationsDir := "pkg/db/migrations"
 
@@ -21,7 +22,6 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to generate secure key: %v", err)
 		}
-		log.Println("Generated Secret Key:", secretKey)
 	}
 	middleware.JWTSecret = []byte(secretKey)
 

@@ -51,5 +51,5 @@ jobs:
           DB_PORT: 5432
           DB_USER: testuser
           DB_PASSWORD: password123
-          DB_NAME: testdb
+          DB_NAME: test_db
         run: go test ./...

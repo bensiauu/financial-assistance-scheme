@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	connAddr := fmt.Sprintf("host=db user=govtech password=%s dbname=financial_assistance sslmode=disable", os.Getenv("DB_PASSWORD"))
+	connAddr := fmt.Sprintf("host=%s user=govtech password=%s dbname=financial_assistance sslmode=disable", os.Getenv("DB_HOST"), os.Getenv("DB_PASSWORD"))
 
 	migrationsDir := "pkg/db/migrations"
 

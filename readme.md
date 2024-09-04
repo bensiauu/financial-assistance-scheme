@@ -59,7 +59,7 @@ For local deployment (without Docker), follow these steps:
 1. **Clone the Repository**:
 
    ```bash
-   git clone https://github.com/yourusername/financial-assistance-scheme.git
+   git clone https://github.com/bensiauu/financial-assistance-scheme.git
    cd financial-assistance-scheme
    ```
 

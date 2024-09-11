@@ -21,6 +21,16 @@ Before setting up the development environment, ensure you have the following ins
 - **Go (Golang)**: [Install Go](https://golang.org/doc/install) (Optional, for local development)
 - **Postman**: [Install Postman](https://www.postman.com/downloads/) (for API testing and documentation)
 
+
+## Default Credentials
+Use these credentials for login endpoint to obtain JSON web token to be used in authentication header for all other endpoints
+```json
+{
+   "email": "root@root.com",
+   "password": "root"
+}
+```
+
 ## Setup and Run the Development Environment
 
 ### Running with Docker Compose

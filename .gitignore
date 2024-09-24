@@ -23,3 +23,71 @@ go.work.sum
 
 # env file
 .env
+
+# Node.js / Frontend ignores
+############################
+# Dependency directories for npm/yarn
+frontend/node_modules/
+frontend/bower_components/
+
+# Production build files (React, Vue, Angular)
+frontend/dist/
+frontend/build/
+
+# Log files
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# Environment variables file
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Next.js build output
+.next/
+
+# Gatsby files
+.cache/
+public/
+
+# Nuxt.js build output
+.nuxt/
+dist/
+
+# Vuepress build output
+.vuepress/dist/
+
+# Storybook build output
+.storybook-out/
+
+# TailwindCSS JIT
+.tailwind/
+
+# SvelteKit build output
+.svelte-kit/
+
+# Vite build output
+dist/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Coverage files
+coverage/
+
+# IDE and editor settings
+##########################
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# MacOS-specific
+.DS_Store
+
+# Windows-specific
+Thumbs.db

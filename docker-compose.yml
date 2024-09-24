@@ -9,6 +9,7 @@ services:
       DB_USER: govtech
       DB_PASSWORD:
       DB_NAME: financial_assistance
+      GIN_MODE: release
     depends_on:
       - db
     networks:

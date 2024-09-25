@@ -60,11 +60,11 @@ func GetAllApplication(c *gin.Context) {
 }
 func GetApplicationByID(c *gin.Context) {
 	id := c.Param("id")
-	var application models.Applicant
+	var application models.Application
 
 	if err := db.DB.First(&application, "id = ?", id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "applicantion not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "application not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

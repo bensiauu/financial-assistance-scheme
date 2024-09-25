@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, List, ListItem, ListItemText, Typography } from '@mui/material';
+import { Container, List, ListItem, ListItemText, Typography, Box, ListItemButton } from '@mui/material';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
@@ -24,24 +24,29 @@ function ApplicationList() {
       <Typography variant="h4" component="h1" gutterBottom>
         Application List
       </Typography>
-      <List>
-        {applications.map((application) => (
-          <ListItem
-            key={application.id}
-            button
-            component={Link}
-            to={`/applications/${application.id}`}
-          >
-            <ListItemText
-              primary={application.name}
-              secondary={`Status: ${application.status}`}
-            />
-          </ListItem>
-        ))}
-      </List>
+      {applications.length === 0 ? (
+        <Box sx={{ mt: 4, textAlign: 'center' }}>
+          <Typography variant="h6" color="textSecondary">
+            No Applications Found
+          </Typography>
+        </Box>
+      ) : (
+        <List>
+          {applications.map((application) => (
+            <ListItem key={application.id} disablePadding>
+              {/* Wrap ListItemButton inside ListItem and Link */}
+              <ListItemButton component={Link} to={`/applications/${application.id}`}>
+                <ListItemText
+                  primary={application.name}
+                  secondary={`Status: ${application.status}`}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      )}
     </Container>
   );
 }
 
 export default ApplicationList;
-

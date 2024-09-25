@@ -15,6 +15,16 @@ func SetupRouter() *gin.Engine {
 	router.Use(middleware.CORSMiddleware())
 
 	router.POST("/login", auth.Login)
+	// Serve static files from the React build directory
+	router.Static("/static", "./frontend/build/static")
+
+	// Serve the index.html file for the root route
+	router.StaticFile("/", "./frontend/build/index.html")
+
+	// For all other routes, serve index.html (to support React Router in client-side routing)
+	router.NoRoute(func(c *gin.Context) {
+		c.File("./frontend/build/index.html")
+	})
 
 	router.Use(middleware.AuthMiddleware())
 	router.Group("/api").Group("/admin").

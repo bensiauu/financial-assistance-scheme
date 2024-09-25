@@ -10,6 +10,7 @@ function ApplicationList() {
     const fetchApplications = async () => {
       try {
         const response = await axios.get('http://localhost:8080/api/applications');
+        console.log(response);
         setApplications(response.data);
       } catch (error) {
         console.error('Error fetching applications:', error);
@@ -33,12 +34,12 @@ function ApplicationList() {
       ) : (
         <List>
           {applications.map((application) => (
-            <ListItem key={application.id} disablePadding>
+            <ListItem key={application.ID} disablePadding>
               {/* Wrap ListItemButton inside ListItem and Link */}
-              <ListItemButton component={Link} to={`/applications/${application.id}`}>
+              <ListItemButton component={Link} to={`/applications/${application.ID}`}>
                 <ListItemText
-                  primary={application.name}
-                  secondary={`Status: ${application.status}`}
+                  primary={application.ID}
+                  secondary={`Status: ${application.Status}`}
                 />
               </ListItemButton>
             </ListItem>

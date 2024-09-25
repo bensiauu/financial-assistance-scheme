@@ -51,6 +51,7 @@ func SetupRouter() *gin.Engine {
 	router.Group("/api").Group("/schemes").
 		POST("/", schemes.CreateScheme).
 		GET("/", schemes.GetAllSchemes).
+		GET("/:id", schemes.GetSchemeByID).
 		GET("/eligible/", schemes.GetEligibleSchemes)
 
 	return router

@@ -7,6 +7,7 @@ import (
 	"github.com/bensiauu/financial-assistance-scheme/models"
 	"github.com/bensiauu/financial-assistance-scheme/pkg/db"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func CreateScheme(c *gin.Context) {
@@ -23,6 +24,7 @@ func CreateScheme(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "scheme created successfully"})
 }
+
 func GetAllSchemes(c *gin.Context) {
 	var schemes []models.Scheme
 	if err := db.DB.Find(&schemes).Error; err != nil {
@@ -35,7 +37,46 @@ func GetAllSchemes(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, schemes)
+	var response []models.SchemeResponse
+
+	for _, scheme := range schemes {
+		response = append(response, models.SchemeResponse{
+			ID:        scheme.ID,
+			Name:      scheme.Name,
+			Criteria:  scheme.Criteria,
+			Benefits:  scheme.Benefits,
+			CreatedAt: scheme.CreatedAt,
+			UpdatedAt: scheme.UpdatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func GetSchemeByID(c *gin.Context) {
+	id := c.Param("id")
+	var scheme models.Scheme
+
+	if err := db.DB.First(&scheme, "id = ?", id).Error; err != nil {
+		if gorm.ErrRecordNotFound == err {
+			c.JSON(http.StatusNotFound, gin.H{"error": "scheme not found"})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve administrator"})
+		return
+	}
+
+	response := models.SchemeResponse{
+		ID:        scheme.ID,
+		Name:      scheme.Name,
+		Criteria:  scheme.Criteria,
+		Benefits:  scheme.Benefits,
+		CreatedAt: scheme.CreatedAt,
+		UpdatedAt: scheme.UpdatedAt,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func GetEligibleSchemes(c *gin.Context) {
@@ -58,5 +99,18 @@ func GetEligibleSchemes(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, eligibleSchemes)
+	var response []models.SchemeResponse
+
+	for _, scheme := range eligibleSchemes {
+		response = append(response, models.SchemeResponse{
+			ID:        scheme.ID,
+			Name:      scheme.Name,
+			Criteria:  scheme.Criteria,
+			Benefits:  scheme.Benefits,
+			CreatedAt: scheme.CreatedAt,
+			UpdatedAt: scheme.UpdatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
 }

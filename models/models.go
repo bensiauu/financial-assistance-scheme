@@ -93,6 +93,15 @@ func (c Criteria) Value() (driver.Value, error) {
 	return json.Marshal(c)
 }
 
+type SchemeResponse struct {
+	ID        uuid.UUID       `json:"id"`
+	Name      string          `json:"name"`
+	Criteria  Criteria        `json:"criteria"`
+	Benefits  json.RawMessage `json:"benefits"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
+}
+
 type Scheme struct {
 	ID        uuid.UUID       `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
 	Name      string          `gorm:"size:255;not null"`   // Name of the scheme

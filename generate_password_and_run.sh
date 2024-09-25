@@ -1,14 +1,24 @@
 #!/bin/bash
 
-# Generate a random 16-character password
-POSTGRES_PASSWORD=$(openssl rand -base64 16)
+# Check if the volume exists
+VOLUME_NAME="financial-assistance-scheme_postgres_data"
+VOLUME_EXISTS=$(docker volume ls -q | grep -w $VOLUME_NAME)
 
-# Create a fresh .env file with the generated password
-echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" > .env
-echo "DB_PASSWORD=${POSTGRES_PASSWORD}" >> .env
+if [ -z "$VOLUME_EXISTS" ]; then
+  # Volume doesn't exist, generate a new password
+  POSTGRES_PASSWORD=$(openssl rand -base64 16)
 
-# Remove any existing containers to avoid caching issues
-docker-compose down --volumes
+  # Create a fresh .env file with the generated password
+  echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" >.env
+  echo "DB_PASSWORD=${POSTGRES_PASSWORD}" >>.env
 
-# Run Docker Compose with the new .env file
+  echo "Generated new password and created a fresh .env file."
+else
+  echo "Volume already exists, skipping password generation."
+fi
+
+# Remove containers without removing volumes
+docker-compose down
+
+# Rebuild and bring up the services
 docker-compose up --build

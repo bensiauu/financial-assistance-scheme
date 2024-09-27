@@ -11,9 +11,12 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:8080/login', {
+      const response = await axios.post('/login', {
         email,
         password,
+        headers: {
+          'Content-type': 'application/json'
+        }
       });
       if (response.data.token) {
         // Store the token in localStorage or sessionStorage

@@ -5,11 +5,13 @@ import SchemeList from './pages/SchemeList'; // Your SchemeList component
 import ApplicantList from './pages/ApplicantList'; // Your ApplicantList component
 import ApplicationDetails from './pages/ApplicationDetails'; // Your ApplicationDetails component
 import MainLayout from './MainLayout'; // MainLayout that includes the sidebar
+import Login from './pages/Login';
 
 function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<Login />} />
         <Route element={<MainLayout />}>
           <Route path="/applications" element={<ApplicationList />} />
           <Route path="/schemes" element={<SchemeList />} />

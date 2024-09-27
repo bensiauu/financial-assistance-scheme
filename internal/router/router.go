@@ -12,47 +12,68 @@ import (
 
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
-	router.Use(middleware.CORSMiddleware())
 
+	// Apply CORS middleware globally
+	// router.Use(middleware.CORSMiddleware())
+
+	// Login route
 	router.POST("/login", auth.Login)
+
 	// Serve static files from the React build directory
 	router.Static("/static", "./frontend/build/static")
 
-	// Serve the index.html file for the root route
+	// Serve index.html for the root route
 	router.StaticFile("/", "./frontend/build/index.html")
 
-	// For all other routes, serve index.html (to support React Router in client-side routing)
+	// Handle React Router paths (serve index.html for non-API routes)
 	router.NoRoute(func(c *gin.Context) {
 		c.File("./frontend/build/index.html")
 	})
 
+	// Protected API routes (after login)
 	router.Use(middleware.AuthMiddleware())
-	router.Group("/api").Group("/admin").
-		POST("/", admin.CreateAdministrator).
-		GET("/", admin.GetAllAdministrators).
-		GET("/:id", admin.GetAdministratorByID).
-		PUT("/:id", admin.UpdateAdministrator).
-		DELETE("/:id", admin.DeleteAdministrator)
 
-	router.Group("/api").Group("/applicants").
-		POST("/", applicants.CreateApplicant).
-		GET("/", applicants.GetAllApplicants).
-		GET("/:id", applicants.GetApplicantByID).
-		PUT("/:id", applicants.UpdateApplicant).
-		DELETE("/:id", applicants.DeleteApplicant)
+	// API routes
+	api := router.Group("/api")
 
-	router.Group("/api").Group("/applications").
-		POST("/", applications.CreateApplication).
-		GET("/", applications.GetAllApplication).
-		GET("/:id", applications.GetApplicationByID).
-		PUT("/:id", applications.UpdateApplication).
-		DELETE("/:id", applications.DeleteApplication)
+	// Administrator routes
+	adminGroup := api.Group("/admin")
+	{
+		adminGroup.POST("/", admin.CreateAdministrator)
+		adminGroup.GET("/", admin.GetAllAdministrators)
+		adminGroup.GET("/:id", admin.GetAdministratorByID)
+		adminGroup.PUT("/:id", admin.UpdateAdministrator)
+		adminGroup.DELETE("/:id", admin.DeleteAdministrator)
+	}
 
-	router.Group("/api").Group("/schemes").
-		POST("/", schemes.CreateScheme).
-		GET("/", schemes.GetAllSchemes).
-		GET("/:id", schemes.GetSchemeByID).
-		GET("/eligible/", schemes.GetEligibleSchemes)
+	// Applicant routes
+	applicantGroup := api.Group("/applicants")
+	{
+		applicantGroup.POST("/", applicants.CreateApplicant)
+		applicantGroup.GET("/", applicants.GetAllApplicants)
+		applicantGroup.GET("/:id", applicants.GetApplicantByID)
+		applicantGroup.PUT("/:id", applicants.UpdateApplicant)
+		applicantGroup.DELETE("/:id", applicants.DeleteApplicant)
+	}
+
+	// Application routes
+	applicationGroup := api.Group("/applications")
+	{
+		applicationGroup.POST("/", applications.CreateApplication)
+		applicationGroup.GET("/", applications.GetAllApplication)
+		applicationGroup.GET("/:id", applications.GetApplicationByID)
+		applicationGroup.PUT("/:id", applications.UpdateApplication)
+		applicationGroup.DELETE("/:id", applications.DeleteApplication)
+	}
+
+	// Scheme routes
+	schemeGroup := api.Group("/schemes")
+	{
+		schemeGroup.POST("/", schemes.CreateScheme)
+		schemeGroup.GET("/", schemes.GetAllSchemes)
+		schemeGroup.GET("/:id", schemes.GetSchemeByID)
+		schemeGroup.GET("/eligible", schemes.GetEligibleSchemes)
+	}
 
 	return router
 }

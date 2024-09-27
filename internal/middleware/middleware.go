@@ -33,7 +33,6 @@ func ValidateJWT(tokenString string) (*jwt.RegisteredClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return JWTSecret, nil
 	})
-
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
 			return nil, err

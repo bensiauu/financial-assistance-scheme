@@ -21,7 +21,7 @@ function ApplicationDetails() {
     const fetchApplicationDetails = async () => {
       try {
         // Fetch the application details by Application ID
-        const applicationResponse = await axios.get(`http://localhost:8080/api/applications/${id}`, {
+        const applicationResponse = await axios.get(` /api/applications/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ function ApplicationDetails() {
         const applicationData = applicationResponse.data;
 
         // Fetch the applicant's name using ApplicantID
-        const applicantResponse = await axios.get(`http://localhost:8080/api/applicants/${applicationData.ApplicantID}`, {
+        const applicantResponse = await axios.get(` /api/applicants/${applicationData.ApplicantID}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -39,7 +39,7 @@ function ApplicationDetails() {
         });
 
         // Fetch the scheme's name using SchemeID
-        const schemeResponse = await axios.get(`http://localhost:8080/api/schemes/${applicationData.SchemeID}`, {
+        const schemeResponse = await axios.get(` /api/schemes/${applicationData.SchemeID}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -115,14 +115,14 @@ function ApplicationDetails() {
           <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 2 }}>
             Created At:
             <Typography variant="body1" sx={{ display: 'inline', ml: 1 }}>
-              {new Date(application.CreatedAt).toLocaleString()}
+              {new Date(application.CreatedAt).toLocaleDateString()}
             </Typography>
           </Typography>
 
           <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 2 }}>
             Updated At:
             <Typography variant="body1" sx={{ display: 'inline', ml: 1 }}>
-              {new Date(application.UpdatedAt).toLocaleString()}
+              {new Date(application.UpdatedAt).toLocaleDateString()}
             </Typography>
           </Typography>
         </Box>

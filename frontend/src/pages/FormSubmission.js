@@ -9,7 +9,7 @@ function FormSubmission() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:8080/api/applications', {
+      await axios.post(' /api/applications', {
         name,
         income,
       });

@@ -1,6 +1,9 @@
 package router
 
 import (
+	"log"
+	"strings"
+
 	admin "github.com/bensiauu/financial-assistance-scheme/internal/admin"
 	applicants "github.com/bensiauu/financial-assistance-scheme/internal/applicants"
 	applications "github.com/bensiauu/financial-assistance-scheme/internal/applications"
@@ -12,6 +15,17 @@ import (
 
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
+
+	// Handle React Router paths, but exclude API routes
+
+	router.NoRoute(func(c *gin.Context) {
+		log.Printf("Request to: %s", c.Request.URL.Path)
+		if strings.HasPrefix(c.Request.URL.Path, "/api") {
+			c.JSON(404, gin.H{"message": "Not Found"})
+		} else {
+			c.File("./frontend/build/index.html")
+		}
+	})
 
 	// Apply CORS middleware globally
 	// router.Use(middleware.CORSMiddleware())

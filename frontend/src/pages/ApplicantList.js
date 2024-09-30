@@ -80,7 +80,7 @@ function ApplicantList() {
   const fetchApplicants = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(' /api/applicants/', {
+      const response = await axios.get(' /api/applicants', {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',

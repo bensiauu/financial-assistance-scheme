@@ -1,30 +1,31 @@
 # Stage 1: Build the Go binary
-FROM golang:1.23-alpine AS builder
+FROM golang:1.23-alpine AS go-builder
 
 WORKDIR /app
 
+# Copy go.mod and go.sum files first to cache dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Copy the rest of the Go application and build the binary
 COPY . .
 RUN go build -o main ./cmd/api/main.go
 
-# Stage 2: Build a small, secure final image
+
+# Stage 3: Create the final image with both Go binary and Node.js static files
 FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates bash
 
 WORKDIR /root/
 
-# Copy the binary and wait script from the builder stage
-COPY --from=builder /app/main .
+COPY --from=go-builder /app/main .
+
+COPY --from=go-builder /app/pkg/db/migrations/ ./pkg/db/migrations/
+
 COPY wait-for-it.sh .
+RUN chmod +x wait-for-it.sh
 
-# Copy the migrations directory
-COPY --from=builder /app/pkg/db/migrations/ ./pkg/db/migrations/
-
-# Expose the application's port
 EXPOSE 8080
 
-# Command to run the app with the wait script
 CMD ["./wait-for-it.sh", "db:5432", "--", "./main"]

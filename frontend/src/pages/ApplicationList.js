@@ -230,77 +230,70 @@ function ApplicationList() {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 5 }}>
-      {applications.length === 0 ? (
-        <Box sx={{ mt: 4, textAlign: 'center' }}>
-          <Typography variant="h6" color="textSecondary">
-            No Applications Found
-          </Typography>
-        </Box>
-      ) : (
-        <TableContainer component={Paper} sx={{ boxShadow: 4, borderRadius: 3 }}>
-          <Table sx={{ minWidth: 750 }} aria-label="applications table">
-            <TableHead sx={{ bgcolor: 'primary.main', color: 'primary.contrastText' }}>
-              <TableRow>
-                <TableCell colSpan={6}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" component="div" sx={{ color: 'white', fontWeight: 'bold' }}>
-                      Applications List
-                    </Typography>
-                    <IconButton
-                      onClick={handleOpen}
-                      sx={{
-                        color: 'white',
-                        backgroundColor: 'primary.dark',
-                        '&:hover': {
-                          backgroundColor: 'primary.light',
-                        },
-                      }}
-                    >
-                      <AddCircleOutlineIcon fontSize="medium" />
+      <TableContainer component={Paper} sx={{ boxShadow: 4, borderRadius: 3 }}>
+        <Table sx={{ minWidth: 750 }} aria-label="applications table">
+          <TableHead sx={{ bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+            <TableRow>
+              <TableCell colSpan={6}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="h6" component="div" sx={{ color: 'white', fontWeight: 'bold' }}>
+                    Applications List
+                  </Typography>
+                  <IconButton
+                    onClick={handleOpen}
+                    sx={{
+                      color: 'white',
+                      backgroundColor: 'primary.dark',
+                      '&:hover': {
+                        backgroundColor: 'primary.light',
+                      },
+                    }}
+                  >
+                    <AddCircleOutlineIcon fontSize="medium" />
+                  </IconButton>
+                </Box>
+              </TableCell>
+            </TableRow>
+
+            <TableRow>
+              <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold' }}>Applicant Name</TableCell>
+              <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold' }}>Status</TableCell>
+              <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold' }}>Scheme Name</TableCell>
+              <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold' }}>Created At</TableCell>
+              <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold' }}>Updated At</TableCell>
+              <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold', textAlign: 'center' }}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {applications.map((application, index) => (
+              <TableRow
+                key={application.ID}
+                hover
+                sx={{
+                  textDecoration: 'none',
+                  '&:hover': {
+                    bgcolor: 'grey.100',
+                  },
+                }}
+              >
+                <TableCell sx={{ border: '1px solid grey' }}>{application.applicantName}</TableCell>
+                <TableCell sx={{ border: '1px solid grey' }}>{application.Status || 'Unknown'}</TableCell>
+                <TableCell sx={{ border: '1px solid grey' }}>{application.schemeName}</TableCell>
+                <TableCell sx={{ border: '1px solid grey' }}>{new Date(application.CreatedAt).toLocaleDateString()}</TableCell>
+                <TableCell sx={{ border: '1px solid grey' }}>{new Date(application.UpdatedAt).toLocaleString()}</TableCell>
+                <TableCell sx={{ border: '1px solid grey' }} align="center">
+                  <Tooltip title="View Details">
+                    <IconButton component={Link} to={`/applications/${application.ID}`} color="primary">
+                      <VisibilityIcon />
                     </IconButton>
-                  </Box>
+                  </Tooltip>
                 </TableCell>
               </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-              <TableRow>
-                <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold' }}>Applicant Name</TableCell>
-                <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold' }}>Status</TableCell>
-                <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold' }}>Scheme Name</TableCell>
-                <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold' }}>Created At</TableCell>
-                <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold' }}>Updated At</TableCell>
-                <TableCell sx={{ border: '1px solid grey', bgcolor: 'grey.200', fontWeight: 'bold', textAlign: 'center' }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {applications.map((application, index) => (
-                <TableRow
-                  key={application.ID}
-                  hover
-                  sx={{
-                    textDecoration: 'none',
-                    '&:hover': {
-                      bgcolor: 'grey.100',
-                    },
-                  }}
-                >
-                  <TableCell sx={{ border: '1px solid grey' }}>{application.applicantName}</TableCell>
-                  <TableCell sx={{ border: '1px solid grey' }}>{application.Status || 'Unknown'}</TableCell>
-                  <TableCell sx={{ border: '1px solid grey' }}>{application.schemeName}</TableCell>
-                  <TableCell sx={{ border: '1px solid grey' }}>{new Date(application.CreatedAt).toLocaleDateString()}</TableCell>
-                  <TableCell sx={{ border: '1px solid grey' }}>{new Date(application.UpdatedAt).toLocaleString()}</TableCell>
-                  <TableCell sx={{ border: '1px solid grey' }} align="center">
-                    <Tooltip title="View Details">
-                      <IconButton component={Link} to={`/applications/${application.ID}`} color="primary">
-                        <VisibilityIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>Create New Application</DialogTitle>
         <DialogContent>

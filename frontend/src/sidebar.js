@@ -7,6 +7,9 @@ import FolderIcon from '@mui/icons-material/Folder';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 
+import LogoutIcon from '@mui/icons-material/Logout';
+
+
 const drawerWidth = 240;
 
 function Sidebar() {
@@ -15,6 +18,10 @@ function Sidebar() {
   // Toggle sidebar open/close
   const toggleDrawer = () => {
     setIsOpen(!isOpen);
+  };
+  const handleLogout = () => {
+    localStorage.removeItem('token'); // Remove the token
+    window.location.href = '/';  // Redirect to login page
   };
 
   return (
@@ -130,6 +137,32 @@ function Sidebar() {
             }}
           >
             <PeopleIcon />
+          </IconButton>
+        )}
+        {isOpen ? (
+          <Button
+            onClick={handleLogout}
+            startIcon={<LogoutIcon />}
+            sx={{
+              justifyContent: 'flex-start',
+              color: 'white',
+              '&:hover': { bgcolor: 'primary.light' },
+              textTransform: 'none',
+            }}
+            fullWidth
+          >
+            Logout
+          </Button>
+        ) : (
+          <IconButton
+            onClick={handleLogout}
+            sx={{
+              justifyContent: 'center',
+              color: 'white',
+              '&:hover': { bgcolor: 'primary.light' },
+            }}
+          >
+            <LogoutIcon />
           </IconButton>
         )}
       </Box>

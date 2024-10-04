@@ -40,14 +40,7 @@ func GetAllSchemes(c *gin.Context) {
 	var response []models.SchemeResponse
 
 	for _, scheme := range schemes {
-		response = append(response, models.SchemeResponse{
-			ID:        scheme.ID,
-			Name:      scheme.Name,
-			Criteria:  scheme.Criteria,
-			Benefits:  scheme.Benefits,
-			CreatedAt: scheme.CreatedAt,
-			UpdatedAt: scheme.UpdatedAt,
-		})
+		response = append(response, scheme.ToResponse())
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -67,15 +60,7 @@ func GetSchemeByID(c *gin.Context) {
 		return
 	}
 
-	response := models.SchemeResponse{
-		ID:        scheme.ID,
-		Name:      scheme.Name,
-		Criteria:  scheme.Criteria,
-		Benefits:  scheme.Benefits,
-		CreatedAt: scheme.CreatedAt,
-		UpdatedAt: scheme.UpdatedAt,
-	}
-
+	response := scheme.ToResponse()
 	c.JSON(http.StatusOK, response)
 }
 
@@ -99,17 +84,10 @@ func GetEligibleSchemes(c *gin.Context) {
 		return
 	}
 
-	var response []models.SchemeResponse
+	response := make([]models.SchemeResponse, 0)
 
 	for _, scheme := range eligibleSchemes {
-		response = append(response, models.SchemeResponse{
-			ID:        scheme.ID,
-			Name:      scheme.Name,
-			Criteria:  scheme.Criteria,
-			Benefits:  scheme.Benefits,
-			CreatedAt: scheme.CreatedAt,
-			UpdatedAt: scheme.UpdatedAt,
-		})
+		response = append(response, scheme.ToResponse())
 	}
 
 	c.JSON(http.StatusOK, response)

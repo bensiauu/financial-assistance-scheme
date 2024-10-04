@@ -111,6 +111,17 @@ type Scheme struct {
 	UpdatedAt time.Time       `gorm:"autoUpdateTime"`      // Timestamp of when the scheme was last updated
 }
 
+func (s *Scheme) ToResponse() SchemeResponse {
+	return SchemeResponse{
+		ID:        s.ID,
+		Name:      s.Name,
+		Criteria:  s.Criteria,
+		Benefits:  s.Benefits,
+		CreatedAt: s.CreatedAt,
+		UpdatedAt: s.UpdatedAt,
+	}
+}
+
 type Application struct {
 	ID          uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	ApplicantID uuid.UUID `gorm:"type:uuid;not null"`                 // Foreign key to applicants

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"log"
 	"time"
 
 	"github.com/bensiauu/financial-assistance-scheme/models"
@@ -30,6 +31,7 @@ func GetEligibleSchemes(applicantID string) ([]models.Scheme, error) {
 
 func isApplicantEligible(applicant models.Applicant, criteria models.Criteria) bool {
 	for _, rule := range criteria.Rules {
+		log.Printf("applicant: %+v", applicant)
 		if !evaluateRule(applicant, rule) {
 			return false
 		}
@@ -52,10 +54,31 @@ func evaluateRule(applicant models.Applicant, rule models.Rule) bool {
 		return compareStrings(applicant.DisabilityStatus, rule.Operator, rule.Value.(string))
 	case "number_of_children":
 		return compareInts(applicant.NumberOfChildren, rule.Operator, int(rule.Value.(float64)))
+	case "last_employed":
+		return compareInts(calculateDate(*applicant.LastEmployed), ">=", int(rule.Value.(float64)))
 	// Add more fields as needed
 	default:
 		return false
 	}
+}
+
+// returns number of months the applicant has been unemployed for
+func calculateDate(last_employed time.Time) int {
+	now := time.Now()
+
+	// Calculate the difference in years and months
+	years := now.Year() - last_employed.Year()
+	months := int(now.Month()) - int(last_employed.Month())
+
+	// Total months difference
+	totalMonths := years*12 + months
+
+	// If last_employed day is greater than the current day, subtract one month
+	if now.Day() < last_employed.Day() {
+		totalMonths--
+	}
+
+	return totalMonths
 }
 
 func calculateAge(dob time.Time) int {
@@ -85,6 +108,7 @@ func compareInts(a int, operator string, b int) bool {
 }
 
 func compareStrings(a string, operator string, b string) bool {
+	log.Printf("evaluating %s VS %s", a, b)
 	switch operator {
 	case "==":
 		return a == b
